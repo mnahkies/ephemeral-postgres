@@ -33,3 +33,8 @@ Connect using `psql`:
 ```shell
 connect-ephemeral-postgres.sh
 ```
+
+## References
+See https://github.com/taminomara/psql-hooks for the unofficial documentation of Postgresql hooks
+
+These slides are also a good reference: https://wiki.postgresql.org/images/e/e3/Hooks_in_postgresql.pdf
