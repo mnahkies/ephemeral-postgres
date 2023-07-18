@@ -23,8 +23,8 @@ static void ensure_database_exists(Port *port, int status) {
     fprintf(stderr, "ensuring database '%s' exists\n", port->database_name);
 
     asprintf(&cmd,
-             "echo \"SELECT 'CREATE DATABASE %s' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '%s')\\gexec\" | psql",
-             port->database_name, port->database_name);
+             "echo \"SELECT 'CREATE DATABASE %s WITH OWNER = %s' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '%s')\\gexec\" | psql",
+             port->database_name, port->user_name, port->database_name);
     system(cmd);
     free(cmd);
 }
