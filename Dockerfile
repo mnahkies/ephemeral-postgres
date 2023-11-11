@@ -16,4 +16,4 @@ RUN make
 FROM postgres:$POSTGRES_VERSION
 ARG POSTGRES_VERSION
 
-COPY --from=0 /build/ensure_database_exists.so /usr/lib/postgresql/$POSTGRES_VERSION/lib/ensure_database_exists.so
+COPY --from=0 /build/ensure_role_and_database_exists.so /usr/lib/postgresql/$POSTGRES_VERSION/lib/ensure_role_and_database_exists.so
