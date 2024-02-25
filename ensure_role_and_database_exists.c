@@ -18,7 +18,8 @@ static void ensure_role_and_database_exists(Port *port, int status) {
         original_client_auth_hook(port, status);
     }
 
-    if (strcmp(port->database_name, "postgres") == 0) {
+    // don't infinitely recurse
+    if (strcmp(port->database_name, "postgres") == 0 && strcmp(port->user_name, "postgres") == 0) {
         return;
     }
 
