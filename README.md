@@ -1,4 +1,5 @@
 # ephemeral-postgres
+![Docker Pulls](https://img.shields.io/docker/pulls/mnahkies/ephemeral-postgres)
 
 A bash script that starts an ephemeral postgres locally in docker for **development purposes**.
 
@@ -13,6 +14,8 @@ databases for your integration test suites, etc.
 
 By default, it will create users with `LOGIN CREATEDB` and authenticate using `TRUST` but
 this can be customized with the environment variables below.
+
+Prebuild images are pulled from dockerhub automatically for recent postgres versions.
 
 ## Installation
 
@@ -30,10 +33,11 @@ start-ephemeral-postgres.sh
 
 **Options**
 
-- `POSTGRES_VERSION=16`
+- `POSTGRES_VERSION=17`
 - `POSTGRES_PASSWORD=postgres`
 - `POSTGRES_HOST_AUTH_METHOD=trust` - could be `scram-sha-256` / `md5` / etc
 - `ROLE_ATTRIBUTES='LOGIN CREATEDB'` - could be `SUPERUSER` / `CREATEROLE BYPASSRLS` / etc
+- `FORCE_BUILD=0` - force building the docker image locally instead of pulling a prebuilt image
 
 Connect using `psql`:
 
