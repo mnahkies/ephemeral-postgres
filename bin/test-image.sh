@@ -15,7 +15,7 @@ fi
 export POSTGRES_VERSION="${1}"
 export POSTGRES_EXTENSIONS="ltree postgis"
 # reuse the image we just built
-export FORCE_BUILD=1
+export EPHEMERAL_POSTGRES_FORCE_BUILD=1
 
 ../start-ephemeral-postgres.sh
 
