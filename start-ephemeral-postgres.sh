@@ -8,9 +8,11 @@ pushd $__dir
 trap popd EXIT
 
 : "${POSTGRES_VERSION:=17}"
+: "${POSTGRES_USER:=postgres}"
 : "${POSTGRES_PASSWORD:=postgres}"
 : "${POSTGRES_HOST_AUTH_METHOD:=trust}"
 : "${ROLE_ATTRIBUTES:=LOGIN CREATEDB}"
+: "${POSTGRES_EXTENSIONS:=}"
 : "${FORCE_BUILD:=0}"
 IMAGE=mnahkies/ephemeral-postgres:$POSTGRES_VERSION
 
@@ -35,9 +37,19 @@ else
 fi
 
 docker run -d --rm --name postgres $MNT \
+  -e POSTGRES_USER="${POSTGRES_USER}" \
   -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
   -e POSTGRES_HOST_AUTH_METHOD="${POSTGRES_HOST_AUTH_METHOD}" \
   -e ROLE_ATTRIBUTES="${ROLE_ATTRIBUTES}" \
   -p 5432:5432 "${IMAGE}" \
   -c shared_buffers=256MB \
   -c 'shared_preload_libraries=$libdir/ensure_role_and_database_exists'
+
+while ! docker exec postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_USER" -c 'SELECT 1;' > /dev/null 2>&1; do
+  echo "Waiting for postgres to start..."
+  sleep 1
+done
+
+for POSTGRES_EXTENSION in $POSTGRES_EXTENSIONS; do
+  docker exec -it postgres psql -e -U "$POSTGRES_USER" -d template1 -c "CREATE EXTENSION IF NOT EXISTS $POSTGRES_EXTENSION;"
+done
