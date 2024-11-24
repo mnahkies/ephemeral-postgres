@@ -2,8 +2,7 @@
 
 set -xeo pipefail
 
-__dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
+__dir="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 pushd "$__dir"
 trap popd EXIT
 

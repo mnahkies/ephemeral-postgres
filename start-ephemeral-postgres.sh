@@ -1,29 +1,12 @@
 #!/usr/bin/env bash
 
-set -exo pipefail
+set -eo pipefail
 
-__dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
+__dir="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 pushd "$__dir"
 trap popd EXIT
 
-: "${POSTGRES_VERSION:=17}"
-: "${POSTGRES_USER:=postgres}"
-: "${POSTGRES_PASSWORD:=postgres}"
-: "${POSTGRES_HOST_AUTH_METHOD:=trust}"
-: "${POSTGRES_ROLE_ATTRIBUTES:=LOGIN CREATEDB}"
-: "${POSTGRES_EXTENSIONS:=}"
-
-: "${EPHEMERAL_POSTGRES_AUTO_UPDATE:=1}"
-: "${EPHEMERAL_POSTGRES_FORCE_BUILD:=0}"
-: "${EPHEMERAL_POSTGRES_DATA_DIR:=}"
-: "${EPHEMERAL_POSTGRES_LINUX_USER:=$(id -u)}"
-: "${EPHEMERAL_POSTGRES_DOCKER_RUN_ARGS:=}"
-
-if [ -f .env.sh ]; then
-  echo "loading config from '.env.sh'"
-  source .env.sh
-fi
+source ./ephemeral-postgres-config.sh
 
 if [[ "${EPHEMERAL_POSTGRES_AUTO_UPDATE}" -eq 1 ]]; then
   if git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
