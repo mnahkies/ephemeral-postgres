@@ -12,7 +12,7 @@ trap popd EXIT
 : "${POSTGRES_PASSWORD:=postgres}"
 : "${POSTGRES_HOST_AUTH_METHOD:=trust}"
 : "${ROLE_ATTRIBUTES:=LOGIN CREATEDB}"
-: "${POSTGRES_EXTENSIONS:=ltree}"
+: "${POSTGRES_EXTENSIONS:=}"
 : "${FORCE_BUILD:=0}"
 IMAGE=mnahkies/ephemeral-postgres:$POSTGRES_VERSION
 
@@ -45,11 +45,11 @@ docker run -d --rm --name postgres $MNT \
   -c shared_buffers=256MB \
   -c 'shared_preload_libraries=$libdir/ensure_role_and_database_exists'
 
-while ! docker exec -it postgres psql -U $POSTGRES_USER -d $POSTGRES_USER -c 'SELECT 1;'; do
+while ! docker exec postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_USER" -c 'SELECT 1;' > /dev/null 2>&1; do
   echo "Waiting for postgres to start..."
   sleep 1
 done
 
 for POSTGRES_EXTENSION in $POSTGRES_EXTENSIONS; do
-  docker exec -it postgres psql -U $POSTGRES_USER -d template1 -c "CREATE EXTENSION IF NOT EXISTS $POSTGRES_EXTENSION;"
+  docker exec -it postgres psql -e -U "$POSTGRES_USER" -d template1 -c "CREATE EXTENSION IF NOT EXISTS $POSTGRES_EXTENSION;"
 done
