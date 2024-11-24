@@ -14,4 +14,4 @@ fi
 
 POSTGRES_VERSION="${1}"
 
-docker build --build-arg POSTGRES_VERSION="${POSTGRES_VERSION}" . -t mnahkies/ephemeral-postgres:"${POSTGRES_VERSION}"
+docker build --build-arg POSTGRES_VERSION="${POSTGRES_VERSION}" ../ -t mnahkies/ephemeral-postgres:"${POSTGRES_VERSION}"
