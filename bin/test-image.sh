@@ -13,10 +13,10 @@ if [[ -z "$1" ]]; then
 fi
 
 export POSTGRES_VERSION="${1}"
-export POSTGRES_EXTENSIONS=ltree postgis
+export POSTGRES_EXTENSIONS="ltree postgis"
 # reuse the image we just built
 export FORCE_BUILD=1
 
 ../start-ephemeral-postgres.sh
 
-docker exec -it postgres psql -e -U some_user -d some_database -c "SELECT PostGIS_Version();"
+docker exec postgres psql -e -U some_user -d some_database -c "SELECT PostGIS_Version();"
