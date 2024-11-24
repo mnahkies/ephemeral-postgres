@@ -51,6 +51,8 @@ else
   if [[ "$OSTYPE" =~ ^linux ]]; then
     echo "Using ram disk"
     EPHEMERAL_POSTGRES_DOCKER_RUN_ARGS+='--mount type=tmpfs,destination=/var/lib/postgresql/data'
+    # Postgres encounters permission issues when using the ram disk unless run as its default linux user
+    EPHEMERAL_POSTGRES_LINUX_USER=''
   fi
 fi
 
