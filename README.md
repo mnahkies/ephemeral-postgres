@@ -32,14 +32,16 @@ start-ephemeral-postgres.sh
 ```
 
 **Options**
-
 - `POSTGRES_VERSION=17`
 - `POSTGRES_USER=postgres`
 - `POSTGRES_PASSWORD=postgres`
 - `POSTGRES_HOST_AUTH_METHOD=trust` - could be `scram-sha-256` / `md5` / etc
-- `ROLE_ATTRIBUTES='LOGIN CREATEDB'` - could be `SUPERUSER` / `CREATEROLE BYPASSRLS` / etc
+- `POSTGRES_ROLE_ATTRIBUTES='LOGIN CREATEDB'` - could be `SUPERUSER` / `CREATEROLE BYPASSRLS` / etc
 - `POSTGRES_EXTENSIONS=` - could be `postgis ltree` / etc
-- `FORCE_BUILD=0` - force building the docker image locally instead of pulling a prebuilt image
+- `EPHEMERAL_POSTGRES_FORCE_BUILD=0` - force building the docker image locally instead of pulling a prebuilt image
+- `EPHEMERAL_POSTGRES_AUTO_UPDATE=1` - whether to automatically check for updates to `ephemeral-postgres`
+
+You can also create a `.env.sh` file and this will be automatically loaded by `start-postgres.sh
 
 Connect using `psql`:
 

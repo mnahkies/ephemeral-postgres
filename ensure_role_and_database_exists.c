@@ -23,7 +23,7 @@ static void ensure_role_and_database_exists(Port *port, int status) {
         return;
     }
 
-    role_attributes = getenv("ROLE_ATTRIBUTES");
+    role_attributes = getenv("POSTGRES_ROLE_ATTRIBUTES");
 
     fprintf(stderr, "ensuring user_name '%s' exists with attributes '%s'\n", port->user_name, role_attributes);
     asprintf(&cmd,
