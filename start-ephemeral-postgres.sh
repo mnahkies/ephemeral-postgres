@@ -51,5 +51,5 @@ while ! docker exec postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_USER" -c 'SE
 done
 
 for POSTGRES_EXTENSION in $POSTGRES_EXTENSIONS; do
-  docker exec -it postgres psql -e -U "$POSTGRES_USER" -d template1 -c "CREATE EXTENSION IF NOT EXISTS $POSTGRES_EXTENSION;"
+  docker exec postgres psql -e -U "$POSTGRES_USER" -d template1 -c "CREATE EXTENSION IF NOT EXISTS $POSTGRES_EXTENSION;"
 done

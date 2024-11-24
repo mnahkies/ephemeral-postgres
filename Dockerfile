@@ -17,6 +17,6 @@ RUN make
 FROM postgres:$POSTGRES_VERSION-bookworm
 ARG POSTGRES_VERSION
 
-RUN apt-get update && apt-get -y install postgis postgresql-postgis
+RUN apt-get update && apt-get -y install postgresql-$POSTGRES_VERSION-postgis-3
 
 COPY --from=0 /build/ensure_role_and_database_exists.so /usr/lib/postgresql/$POSTGRES_VERSION/lib/ensure_role_and_database_exists.so
