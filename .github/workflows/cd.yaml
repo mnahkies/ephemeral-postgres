@@ -12,6 +12,10 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
+
+    env:
+      EPHEMERAL_POSTGRES_AUTO_UPDATE: 0
+
     strategy:
       matrix:
         postgres-version: [
@@ -20,6 +24,7 @@ jobs:
           16,
           17
         ]
+
     steps:
       - uses: actions/checkout@v4
         with:

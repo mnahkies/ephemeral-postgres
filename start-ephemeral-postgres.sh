@@ -7,13 +7,14 @@ __dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 pushd $__dir
 trap popd EXIT
 
-: "${EPHEMERAL_POSTGRES_AUTO_UPDATE:=1}"
 : "${POSTGRES_VERSION:=17}"
 : "${POSTGRES_USER:=postgres}"
 : "${POSTGRES_PASSWORD:=postgres}"
 : "${POSTGRES_HOST_AUTH_METHOD:=trust}"
 : "${POSTGRES_ROLE_ATTRIBUTES:=LOGIN CREATEDB}"
 : "${POSTGRES_EXTENSIONS:=}"
+
+: "${EPHEMERAL_POSTGRES_AUTO_UPDATE:=1}"
 : "${EPHEMERAL_POSTGRES_FORCE_BUILD:=0}"
 
 if [ -f .env.sh ]; then
