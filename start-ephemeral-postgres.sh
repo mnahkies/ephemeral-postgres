@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-set -eo pipefail
+set -exo pipefail
 
 __dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-pushd $__dir
+pushd "$__dir"
 trap popd EXIT
 
 : "${POSTGRES_VERSION:=17}"
@@ -17,6 +17,8 @@ trap popd EXIT
 : "${EPHEMERAL_POSTGRES_AUTO_UPDATE:=1}"
 : "${EPHEMERAL_POSTGRES_FORCE_BUILD:=0}"
 : "${EPHEMERAL_POSTGRES_DATA_DIR:=}"
+: "${EPHEMERAL_POSTGRES_LINUX_USER:=$(id -u)}"
+: "${EPHEMERAL_POSTGRES_DOCKER_RUN_ARGS:=}"
 
 if [ -f .env.sh ]; then
   echo "loading config from '.env.sh'"
@@ -38,8 +40,8 @@ fi
 
 IMAGE=mnahkies/ephemeral-postgres:$POSTGRES_VERSION
 
-docker stop postgres || echo 'already stopped'
-docker rm postgres || echo 'already removed'
+docker stop postgres > /dev/null 2>&1 || echo 'already stopped'
+docker rm postgres > /dev/null 2>&1 || echo 'already removed'
 
 if [[ "${EPHEMERAL_POSTGRES_FORCE_BUILD}" -ne 0 ]]; then
   echo "Force build enabled. Skipping pull and building Docker image with POSTGRES_VERSION=$POSTGRES_VERSION"
@@ -53,26 +55,28 @@ else
 fi
 
 if [ -n "$EPHEMERAL_POSTGRES_DATA_DIR" ]; then
-  if [[ "$EPHEMERAL_POSTGRES_DATA_DIR" != /* ]]; then
-    EPHEMERAL_POSTGRES_DATA_DIR="$(pwd)/$EPHEMERAL_POSTGRES_DATA_DIR"
-  fi
+  EPHEMERAL_POSTGRES_DATA_DIR=$(realpath "$EPHEMERAL_POSTGRES_DATA_DIR")
 
   if [ ! -d "$EPHEMERAL_POSTGRES_DATA_DIR" ]; then
     echo "Creating $EPHEMERAL_POSTGRES_DATA_DIR"
     mkdir -p "$EPHEMERAL_POSTGRES_DATA_DIR"
   fi
 
-  MNT="-v $EPHEMERAL_POSTGRES_DATA_DIR:/var/lib/postgresql/data"
+  EPHEMERAL_POSTGRES_DOCKER_RUN_ARGS+=" -v $EPHEMERAL_POSTGRES_DATA_DIR:/var/lib/postgresql/data"
   echo "Using data directory $EPHEMERAL_POSTGRES_DATA_DIR"
 else
   if [[ "$OSTYPE" =~ ^linux ]]; then
-    MNT='--mount type=tmpfs,destination=/var/lib/postgresql/data'
-  else
-    MNT=''
+    echo "Using ram disk"
+    EPHEMERAL_POSTGRES_DOCKER_RUN_ARGS+='--mount type=tmpfs,destination=/var/lib/postgresql/data'
   fi
 fi
 
-docker run -d --rm --name postgres $MNT \
+if [ -n "$EPHEMERAL_POSTGRES_LINUX_USER" ]; then
+  EPHEMERAL_POSTGRES_DOCKER_RUN_ARGS+=" --user $EPHEMERAL_POSTGRES_LINUX_USER"
+fi
+
+# shellcheck disable=SC2086
+docker run -d --name postgres $EPHEMERAL_POSTGRES_DOCKER_RUN_ARGS \
   -e POSTGRES_USER="${POSTGRES_USER}" \
   -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
   -e POSTGRES_HOST_AUTH_METHOD="${POSTGRES_HOST_AUTH_METHOD}" \
