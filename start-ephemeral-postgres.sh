@@ -8,6 +8,43 @@ trap popd EXIT
 
 source ./ephemeral-postgres-config.sh
 
+has_no_cow() {
+    local file="$1"
+    [[ "$(lsattr "$file" 2>/dev/null | awk '{print $1}')" == *C* ]]
+}
+
+disable_cow() {
+    local dir="$1"
+
+    if has_no_cow "$dir"; then
+        echo "Skipping $dir: already has No_COW attribute"
+        return
+    fi
+
+    # Set the No_COW attribute on the directory
+    chattr +C "$dir"
+    if [[ $? -ne 0 ]]; then
+        echo "Failed to set +C attribute on $dir"
+        exit 1
+    fi
+
+    # Recreate files and directories to ensure +C applies to them
+    for file in "$dir"/*; do
+        if [[ -f "$file" ]]; then
+          if has_no_cow "$file"; then
+              echo "Skipping $file: already has No_COW attribute"
+          else
+          echo "Disable CoW on $file"
+            mv "$file" "$file.tmp"
+            cp --preserve=all "$file.tmp" "$file"
+            rm "$file.tmp"
+          fi
+        elif [[ -d "$file" ]]; then
+            disable_cow "$file" # Recursively disable CoW in subdirectories
+        fi
+    done
+}
+
 if [[ "${EPHEMERAL_POSTGRES_AUTO_UPDATE}" -eq 1 ]]; then
   if git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
     if [ -z "$(git status --porcelain)" ]; then
@@ -47,6 +84,13 @@ if [ -n "$EPHEMERAL_POSTGRES_DATA_DIR" ]; then
 
   EPHEMERAL_POSTGRES_DOCKER_RUN_ARGS+=" -v $EPHEMERAL_POSTGRES_DATA_DIR:/var/lib/postgresql/data"
   echo "Using data directory $EPHEMERAL_POSTGRES_DATA_DIR"
+
+  # CoW (eg: with btrs) has a bad time with the frequent small writes from postgres
+  if [[ "$OSTYPE" =~ ^linux ]]; then
+    echo "Disabling CoW (copy on write) in data directory $EPHEMERAL_POSTGRES_DATA_DIR"
+    disable_cow "$EPHEMERAL_POSTGRES_DATA_DIR"
+  fi
+
 else
   if [[ "$OSTYPE" =~ ^linux ]]; then
     echo "Using ram disk"
