@@ -16,6 +16,7 @@ trap popd EXIT
 
 : "${EPHEMERAL_POSTGRES_AUTO_UPDATE:=1}"
 : "${EPHEMERAL_POSTGRES_FORCE_BUILD:=0}"
+: "${EPHEMERAL_POSTGRES_DATA_DIR:=}"
 
 if [ -f .env.sh ]; then
   echo "loading config from '.env.sh'"
@@ -51,10 +52,24 @@ else
   fi
 fi
 
-if [[ "$OSTYPE" =~ ^linux ]]; then
-  MNT='--mount type=tmpfs,destination=/var/lib/postgresql/data'
+if [ -n "$EPHEMERAL_POSTGRES_DATA_DIR" ]; then
+  if [[ "$EPHEMERAL_POSTGRES_DATA_DIR" != /* ]]; then
+    EPHEMERAL_POSTGRES_DATA_DIR="$(pwd)/$EPHEMERAL_POSTGRES_DATA_DIR"
+  fi
+
+  if [ ! -d "$EPHEMERAL_POSTGRES_DATA_DIR" ]; then
+    echo "Creating $EPHEMERAL_POSTGRES_DATA_DIR"
+    mkdir -p "$EPHEMERAL_POSTGRES_DATA_DIR"
+  fi
+
+  MNT="-v $EPHEMERAL_POSTGRES_DATA_DIR:/var/lib/postgresql/data"
+  echo "Using data directory $EPHEMERAL_POSTGRES_DATA_DIR"
 else
-  MNT=''
+  if [[ "$OSTYPE" =~ ^linux ]]; then
+    MNT='--mount type=tmpfs,destination=/var/lib/postgresql/data'
+  else
+    MNT=''
+  fi
 fi
 
 docker run -d --rm --name postgres $MNT \
