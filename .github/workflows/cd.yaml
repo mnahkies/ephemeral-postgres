@@ -41,6 +41,7 @@ jobs:
 
       - name: Test ephemeral-postgres ${{ matrix.postgres-version }}
         run: ./bin/test-image.sh "${{ matrix.postgres-version }}"
+        timeout-minutes: 2
 
       - name: Push ephemeral-postgres ${{ matrix.postgres-version }}
         if: github.ref_name == 'main'
