@@ -1,5 +1,5 @@
 # ephemeral-postgres
-![Docker Pulls](https://img.shields.io/docker/pulls/mnahkies/ephemeral-postgres)
+[![Docker Pulls](https://img.shields.io/docker/pulls/mnahkies/ephemeral-postgres)](https://hub.docker.com/r/mnahkies/ephemeral-postgres) [![GitHub Repo stars](https://img.shields.io/github/stars/mnahkies/ephemeral-postgres)](https://github.com/mnahkies/ephemeral-postgres)
 
 A bash script that starts an ephemeral postgres locally in docker for **development purposes**.
 
