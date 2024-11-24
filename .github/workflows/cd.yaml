@@ -39,4 +39,4 @@ jobs:
 
       - name: Push ephemeral-postgres ${{ matrix.postgres-version }}
         if: github.ref_name == 'main'
-        run: ./bin/test-image.sh "${{ matrix.postgres-version }}"
+        run: ./bin/push-image.sh "${{ matrix.postgres-version }}"
