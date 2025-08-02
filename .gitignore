@@ -1,2 +1,5 @@
 .idea
 .env.sh
+compile_commands.json
+*.o
+*.so
