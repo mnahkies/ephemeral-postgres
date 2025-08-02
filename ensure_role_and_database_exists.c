@@ -53,7 +53,7 @@ static void ensure_role_and_database_exists(Port *port, int status) {
                  port->user_name,
                  postgres_user,
                  postgres_user
-    ) < 0) {
+        ) < 0) {
         ereport(ERROR, errmsg("failed to allocate command string"));
     }
 
@@ -69,7 +69,7 @@ static void ensure_role_and_database_exists(Port *port, int status) {
                  port->database_name,
                  postgres_user,
                  postgres_user
-    ) < 0) {
+        ) < 0) {
         ereport(ERROR, errmsg("failed to allocate command string"));
     }
 
