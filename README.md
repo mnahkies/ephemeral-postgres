@@ -62,6 +62,15 @@ docker exec -it postgres psql -U postgres postgres
 docker exec -it postgres psql -U any_username any_database_name
 ```
 
+## Development
+
+You can use [bear](https://github.com/rizsotto/Bear) to generate a `compile_commands.json` which is 
+understood by IDE's like CLion.
+
+```shell
+bear -- make
+```
+
 ## References
 
 See https://github.com/taminomara/psql-hooks for the unofficial documentation of Postgresql hooks
