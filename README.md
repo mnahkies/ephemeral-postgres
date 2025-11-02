@@ -41,7 +41,7 @@ start-ephemeral-postgres.sh
 ```
 
 **Options**
-- `POSTGRES_VERSION=17`
+- `POSTGRES_VERSION=18`
 - `POSTGRES_USER=postgres`
 - `POSTGRES_PASSWORD=postgres`
 - `POSTGRES_HOST_AUTH_METHOD=trust` - could be `scram-sha-256` / `md5` / etc

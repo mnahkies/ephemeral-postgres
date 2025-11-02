@@ -82,7 +82,7 @@ if [ -n "$EPHEMERAL_POSTGRES_DATA_DIR" ]; then
     mkdir -p "$EPHEMERAL_POSTGRES_DATA_DIR"
   fi
 
-  EPHEMERAL_POSTGRES_DOCKER_RUN_ARGS+=" -v $EPHEMERAL_POSTGRES_DATA_DIR:/var/lib/postgresql/data"
+  EPHEMERAL_POSTGRES_DOCKER_RUN_ARGS+=" -v $EPHEMERAL_POSTGRES_DATA_DIR:/var/lib/postgresql"
   echo "Using data directory $EPHEMERAL_POSTGRES_DATA_DIR"
 
   # CoW (eg: with btrs) has a bad time with the frequent small writes from postgres
@@ -94,7 +94,7 @@ if [ -n "$EPHEMERAL_POSTGRES_DATA_DIR" ]; then
 else
   if [[ "$OSTYPE" =~ ^linux ]]; then
     echo "Using ram disk"
-    EPHEMERAL_POSTGRES_DOCKER_RUN_ARGS+='--mount type=tmpfs,destination=/var/lib/postgresql/data'
+    EPHEMERAL_POSTGRES_DOCKER_RUN_ARGS+='--mount type=tmpfs,destination=/var/lib/postgresql'
     # Postgres encounters permission issues when using the ram disk unless run as its default linux user
     EPHEMERAL_POSTGRES_LINUX_USER=''
   fi
