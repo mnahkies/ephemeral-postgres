@@ -2,7 +2,7 @@
 
 set -eo pipefail
 
-: "${POSTGRES_VERSION:=17}"
+: "${POSTGRES_VERSION:=18}"
 : "${POSTGRES_USER:=postgres}"
 : "${POSTGRES_PASSWORD:=postgres}"
 : "${POSTGRES_HOST_AUTH_METHOD:=trust}"
