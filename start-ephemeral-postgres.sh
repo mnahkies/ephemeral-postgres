@@ -92,11 +92,14 @@ if [ -n "$EPHEMERAL_POSTGRES_DATA_DIR" ]; then
   fi
 
 else
+  # Postgres encounters permission issues when using the ram disk unless run as its default linux user
+  EPHEMERAL_POSTGRES_LINUX_USER=''
+
   if [[ "$OSTYPE" =~ ^linux ]]; then
     echo "Using ram disk"
     EPHEMERAL_POSTGRES_DOCKER_RUN_ARGS+='--mount type=tmpfs,destination=/var/lib/postgresql'
-    # Postgres encounters permission issues when using the ram disk unless run as its default linux user
-    EPHEMERAL_POSTGRES_LINUX_USER=''
+  else
+    echo "Using default docker volume"
   fi
 fi
 
@@ -110,12 +113,28 @@ docker run -d --name postgres $EPHEMERAL_POSTGRES_DOCKER_RUN_ARGS \
   -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
   -e POSTGRES_HOST_AUTH_METHOD="${POSTGRES_HOST_AUTH_METHOD}" \
   -e POSTGRES_ROLE_ATTRIBUTES="${POSTGRES_ROLE_ATTRIBUTES}" \
+  -e POSTGRES_DATABASE_OWNER="${POSTGRES_DATABASE_OWNER}" \
+  -e POSTGRES_GRANT_PUBLIC_SCHEMA_CREATE="${POSTGRES_GRANT_PUBLIC_SCHEMA_CREATE}" \
   -p 5432:5432 "${IMAGE}" \
   -c shared_buffers=256MB \
   -c 'shared_preload_libraries=$libdir/ensure_role_and_database_exists'
 
+WAIT_ATTEMPTS=0
 while ! docker exec postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_USER" -c 'SELECT 1;' > /dev/null 2>&1; do
-  echo "Waiting for postgres to start..."
+  WAIT_ATTEMPTS=$((WAIT_ATTEMPTS + 1))
+
+  # Clear previous output (move cursor up past the log lines + header)
+  if [[ $WAIT_ATTEMPTS -gt 1 && -n "$PREV_LOG_LINES" ]]; then
+    for ((i = 0; i < PREV_LOG_LINES + 1; i++)); do
+      printf '\033[1A\033[2K'
+    done
+  fi
+
+  echo "Waiting for postgres to start... (attempt $WAIT_ATTEMPTS)"
+  LOGS=$(docker logs --tail 10 postgres 2>&1 || true)
+  PREV_LOG_LINES=$(echo "$LOGS" | wc -l)
+  echo "$LOGS"
+
   sleep 1
 done
 

@@ -6,7 +6,7 @@ A bash script that starts an ephemeral postgres locally in docker for **developm
 By default, **Data is destroyed** between runs, and on Linux the data is stored on a `tmpfs` (ramdisk)
 for faster startup.
 
-For persistent data, configure `EPHEMERAL_POSTGRES_DATA_DIR` to be a path you wish to 
+For persistent data, configure `EPHEMERAL_POSTGRES_DATA_DIR` to be a path you wish to
 store the data on your host machine.
 
 The container loads a `ClientAuthentication` hook `ensure_role_and_database_exists` that
@@ -47,6 +47,9 @@ start-ephemeral-postgres.sh
 - `POSTGRES_HOST_AUTH_METHOD=trust` - could be `scram-sha-256` / `md5` / etc
 - `POSTGRES_ROLE_ATTRIBUTES='LOGIN CREATEDB'` - could be `SUPERUSER` / `CREATEROLE BYPASSRLS` / etc
 - `POSTGRES_EXTENSIONS=` - could be `postgis ltree` / etc
+- `POSTGRES_DATABASE_OWNER=` - leave unset to default to the connecting user
+- `POSTGRES_GRANT_PUBLIC_SCHEMA_CREATE=` - set to `true` to use pre-v15 default schema privileges
+
 - `EPHEMERAL_POSTGRES_FORCE_BUILD=0` - force building the docker image locally instead of pulling a prebuilt image
 - `EPHEMERAL_POSTGRES_AUTO_UPDATE=1` - whether to automatically check for updates to `ephemeral-postgres`
 - `EPHEMERAL_POSTGRES_DATA_DIR=` - when empty, use a tmpfs / ram disk, otherwise a path to bind mount to the postgres data directory
@@ -64,7 +67,7 @@ docker exec -it postgres psql -U any_username any_database_name
 
 ## Development
 
-You can use [bear](https://github.com/rizsotto/Bear) to generate a `compile_commands.json` which is 
+You can use [bear](https://github.com/rizsotto/Bear) to generate a `compile_commands.json` which is
 understood by IDE's like CLion.
 
 ```shell
