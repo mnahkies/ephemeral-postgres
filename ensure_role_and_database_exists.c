@@ -2,10 +2,11 @@
 #include "fmgr.h"
 
 #include "libpq/auth.h"
-#include "executor/spi.h"
 #include "miscadmin.h"
 
 PG_MODULE_MAGIC;
+
+#define INTERNAL_MARKER "ephemeral_pg.internal=true"
 
 static ClientAuthentication_hook_type original_client_auth_hook = NULL;
 
@@ -30,6 +31,11 @@ static void ensure_role_and_database_exists(Port *port, int status) {
         original_client_auth_hook(port, status);
     }
 
+    // Skip if this is an internal connection from our own psql commands.
+    if (port->cmdline_options && strstr(port->cmdline_options, INTERNAL_MARKER)) {
+        return;
+    }
+
     if (!postgres_user) {
         ereport(ERROR, errmsg("POSTGRES_USER environment variable is not set."));
     }
@@ -38,43 +44,64 @@ static void ensure_role_and_database_exists(Port *port, int status) {
         ereport(ERROR, errmsg("POSTGRES_ROLE_ATTRIBUTES environment variable is not set."));
     }
 
-    // don't infinitely recurse when connecting as superuser
-    if (strcmp(port->user_name, postgres_user) == 0 && strcmp(port->database_name, postgres_user) == 0) {
-        return;
+    // if the requested user isn't the postgres user, ensure it exists
+    if (strcmp(port->user_name, postgres_user) != 0) {
+        elog(LOG, "handling connection for username '%s' to database '%s'", port->user_name, port->database_name);
+
+        elog(LOG, "ensuring user_name '%s' exists with attributes '%s'", port->user_name, role_attributes);
+        if (asprintf(&cmd,
+                    "echo \"SELECT 'CREATE ROLE %s WITH %s' WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '%s')\\gexec\" | PGOPTIONS='-c ephemeral_pg.internal=true' psql -U %s -d %s",
+                    port->user_name,
+                    role_attributes,
+                    port->user_name,
+                    postgres_user,
+                    postgres_user
+            ) < 0) {
+            ereport(ERROR, errmsg("failed to allocate command string"));
+        }
+
+        execute_command(cmd);
+        free(cmd);
     }
 
-    elog(LOG, "handling connection for username '%s' to database '%s'", port->user_name, port->database_name);
+    // if the requested database isn't the postgres user database, ensure it exists and set permissions
+    if (strcmp(port->database_name, postgres_user) != 0) {
+        const char *database_owner_env = getenv("POSTGRES_DATABASE_OWNER");
+        const char *database_owner = (database_owner_env && database_owner_env[0] != '\0') ? database_owner_env : port->user_name;
 
-    elog(LOG, "ensuring user_name '%s' exists with attributes '%s'", port->user_name, role_attributes);
-    if (asprintf(&cmd,
-                 "echo \"SELECT 'CREATE ROLE %s WITH %s' WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '%s')\\gexec\" | psql -U %s -d %s",
-                 port->user_name,
-                 role_attributes,
-                 port->user_name,
-                 postgres_user,
-                 postgres_user
-        ) < 0) {
-        ereport(ERROR, errmsg("failed to allocate command string"));
+        elog(LOG, "ensuring database '%s' exists with owner '%s'", port->database_name, database_owner);
+
+        if (asprintf(&cmd,
+                    "echo \"SELECT 'CREATE DATABASE %s WITH OWNER = %s' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '%s')\\gexec\" | PGOPTIONS='-c ephemeral_pg.internal=true' psql -U %s -d %s",
+                    port->database_name,
+                    database_owner,
+                    port->database_name,
+                    postgres_user,
+                    postgres_user
+            ) < 0) {
+            ereport(ERROR, errmsg("failed to allocate command string"));
+        }
+
+        execute_command(cmd);
+        free(cmd);
+
+        if(strcmp(port->database_name, "template1") == 0 || strcmp(port->database_name, "template0") == 0 ){
+            return;
+        }
+
+        // if enabled, grant posgtes v14 and earlier style permissions of create on schema public, for apps that rely on it.
+        const char *grant_public = getenv("POSTGRES_GRANT_PUBLIC_SCHEMA_CREATE");
+        if (grant_public != NULL && strcmp(grant_public, "true") == 0) {
+            elog(LOG, "granting CREATE ON SCHEMA public TO PUBLIC for database '%s'", port->database_name);
+
+            if(asprintf(&cmd, "PGOPTIONS='-c ephemeral_pg.internal=true' psql -U %s -d %s -c \"GRANT CREATE ON SCHEMA public TO PUBLIC\"", postgres_user, port->database_name) < 0) {
+                ereport(ERROR, errmsg("failed to allocate command string"));
+            }
+
+            execute_command(cmd);
+            free(cmd);
+        }
     }
-
-    execute_command(cmd);
-    free(cmd);
-
-    elog(LOG, "ensuring database '%s' exists", port->database_name);
-
-    if (asprintf(&cmd,
-                 "echo \"SELECT 'CREATE DATABASE %s WITH OWNER = %s' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '%s')\\gexec\" | psql -U %s -d %s",
-                 port->database_name,
-                 port->user_name,
-                 port->database_name,
-                 postgres_user,
-                 postgres_user
-        ) < 0) {
-        ereport(ERROR, errmsg("failed to allocate command string"));
-    }
-
-    execute_command(cmd);
-    free(cmd);
 }
 
 void _PG_init(void) {
