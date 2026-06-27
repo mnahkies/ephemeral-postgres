@@ -1,6 +1,11 @@
 #include "postgres.h"
 #include "fmgr.h"
 
+#include <unistd.h>
+#include <sys/wait.h>
+#include <errno.h>
+#include "lib/stringinfo.h"
+
 #include "libpq/auth.h"
 #include "miscadmin.h"
 
@@ -11,14 +16,69 @@ PG_MODULE_MAGIC;
 static ClientAuthentication_hook_type original_client_auth_hook = NULL;
 
 static void execute_command(const char *cmd) {
-    int result = system(cmd);
+    int         pipefd[2];
+    pid_t       pid;
 
-    if (result != 0) {
-        ereport(ERROR, (
-                    errmsg("command failed"),
-                    errdetail("Command: %s\nExit code: %d", cmd, WEXITSTATUS(result))
-                )
-        );
+    if (pipe(pipefd) == -1)
+        ereport(ERROR, (errmsg("failed to create pipe: %m")));
+
+    pid = fork();
+    if (pid == -1)
+    {
+        close(pipefd[0]);
+        close(pipefd[1]);
+        ereport(ERROR, (errmsg("failed to fork: %m")));
+    }
+
+    if (pid == 0)
+    {
+        /* Child process */
+        close(pipefd[0]);
+        dup2(pipefd[1], STDOUT_FILENO);
+        dup2(pipefd[1], STDERR_FILENO);
+        close(pipefd[1]);
+
+        execl("/bin/sh", "sh", "-c", cmd, (char *) NULL);
+        /* If execl returns, it failed */
+        _exit(127);
+    }
+    else
+    {
+        /* Parent process */
+        char            buffer[1024];
+        ssize_t         nbytes;
+        StringInfoData  output;
+        int             status;
+
+        close(pipefd[1]);
+        initStringInfo(&output);
+
+        while ((nbytes = read(pipefd[0], buffer, sizeof(buffer))) != 0)
+        {
+            if (nbytes == -1)
+            {
+                if (errno == EINTR)
+                    continue;
+                break;
+            }
+            appendBinaryStringInfo(&output, buffer, nbytes);
+        }
+
+        close(pipefd[0]);
+
+        if (waitpid(pid, &status, 0) == -1)
+            ereport(ERROR, (errmsg("waitpid failed: %m")));
+
+        if (!WIFEXITED(status) || WEXITSTATUS(status) != 0)
+        {
+            int exit_code = WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+            ereport(ERROR, (
+                        errmsg("command failed"),
+                        errdetail("Command: %s\nExit code: %d\nOutput: %s", cmd, exit_code, output.data)
+                    )
+            );
+        }
+        pfree(output.data);
     }
 }
 
@@ -89,17 +149,19 @@ static void ensure_role_and_database_exists(Port *port, int status) {
             return;
         }
 
-        // if enabled, grant posgtes v14 and earlier style permissions of create on schema public, for apps that rely on it.
-        const char *grant_public = getenv("POSTGRES_GRANT_PUBLIC_SCHEMA_CREATE");
-        if (grant_public != NULL && strcmp(grant_public, "true") == 0) {
-            elog(LOG, "granting CREATE ON SCHEMA public TO PUBLIC for database '%s'", port->database_name);
+        {
+            // if enabled, grant posgtes v14 and earlier style permissions of create on schema public, for apps that rely on it.
+            const char *grant_public = getenv("POSTGRES_GRANT_PUBLIC_SCHEMA_CREATE");
+            if (grant_public != NULL && strcmp(grant_public, "true") == 0) {
+                elog(LOG, "granting CREATE ON SCHEMA public TO PUBLIC for database '%s'", port->database_name);
 
-            if(asprintf(&cmd, "PGOPTIONS='-c ephemeral_pg.internal=true' psql -U %s -d %s -c \"GRANT CREATE ON SCHEMA public TO PUBLIC\"", postgres_user, port->database_name) < 0) {
-                ereport(ERROR, errmsg("failed to allocate command string"));
+                if(asprintf(&cmd, "PGOPTIONS='-c ephemeral_pg.internal=true' psql -U %s -d %s -c \"GRANT CREATE ON SCHEMA public TO PUBLIC\"", postgres_user, port->database_name) < 0) {
+                    ereport(ERROR, errmsg("failed to allocate command string"));
+                }
+
+                execute_command(cmd);
+                free(cmd);
             }
-
-            execute_command(cmd);
-            free(cmd);
         }
     }
 }
