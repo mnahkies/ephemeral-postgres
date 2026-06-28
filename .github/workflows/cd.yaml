@@ -9,12 +9,21 @@ on:
   schedule:
     - cron: "0 0 * * 1"
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ci:
+    name: ci (${{ matrix.postgres-version }})
     runs-on: ubuntu-latest
 
     env:
       EPHEMERAL_POSTGRES_AUTO_UPDATE: 0
+      POSTGRES_VERSION: ${{ matrix.postgres-version }}
 
     strategy:
       matrix:
@@ -39,12 +48,12 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build ephemeral-postgres ${{ matrix.postgres-version }}
-        run: ./bin/build-image.sh "${{ matrix.postgres-version }}"
+        run: ./bin/build-image.sh "$POSTGRES_VERSION"
 
       - name: Test ephemeral-postgres ${{ matrix.postgres-version }}
-        run: ./bin/test-image.sh "${{ matrix.postgres-version }}"
+        run: ./bin/test-image.sh "$POSTGRES_VERSION"
         timeout-minutes: 2
 
       - name: Push ephemeral-postgres ${{ matrix.postgres-version }}
         if: github.ref_name == 'main'
-        run: ./bin/push-image.sh "${{ matrix.postgres-version }}"
+        run: ./bin/push-image.sh "$POSTGRES_VERSION"
